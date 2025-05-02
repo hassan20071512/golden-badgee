@@ -1,0 +1,224 @@
+
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <title>الوسام الذهبي</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: 'Cairo', sans-serif;
+      background: linear-gradient(to bottom, #fffdf7, #fff8e1);
+      color: #5d4037;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 800px;
+      margin: 40px auto;
+      background: white;
+      padding: 30px;
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(191, 161, 60, 0.2);
+    }
+    h1, h2, h3 {
+      text-align: center;
+      color: #bfa13c;
+    }
+    input, select, button, textarea {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      border: 1px solid #e0c97d;
+      border-radius: 10px;
+      font-size: 16px;
+    }
+    button {
+      background-color: #bfa13c;
+      color: white;
+      border: none;
+      cursor: pointer;
+      transition: 0.3s ease;
+    }
+    button:hover {
+      background-color: #a68e30;
+    }
+    .hidden {
+      display: none;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td {
+      border: 1px solid #f1e1aa;
+      padding: 10px;
+      text-align: center;
+    }
+    th {
+      background-color: #bfa13c;
+      color: white;
+    }
+    .settings {
+      margin-top: 20px;
+      padding: 10px;
+      background-color: #fff5cc;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>الوسام الذهبي</h1>
+
+    <div id="login-section">
+      <h2>تسجيل الدخول</h2>
+      <input type="text" id="username" placeholder="اسم المستخدم">
+      <input type="password" id="password" placeholder="كلمة المرور">
+      <button onclick="login()">دخول</button>
+    </div>
+
+    <div id="admin-panel" class="hidden">
+      <h2>لوحة المشرف</h2>
+      <input type="text" id="new-name" placeholder="إضافة اسم مشارك جديد">
+      <button onclick="addName()">إضافة</button>
+      <textarea id="tasks" placeholder="اكتب المهام اليومية (كل مهمة في سطر)"></textarea>
+      <button onclick="saveTasks()">حفظ المهام</button>
+      <button onclick="viewProgress()">عرض التقدم</button>
+      <div class="settings">
+        <h3>إعدادات</h3>
+        <label>تغيير كلمة المرور:</label>
+        <input type="password" id="new-password">
+        <button onclick="changePassword()">تحديث</button>
+      </div>
+    </div>
+
+    <div id="participant-panel" class="hidden">
+      <h2>اختر اسمك</h2>
+      <select id="name-list"></select>
+      <button onclick="selectName()">متابعة</button>
+    </div>
+
+    <div id="daily-table" class="hidden">
+      <h2>جدول الإنجاز</h2>
+      <table id="progress-table">
+        <thead>
+          <tr>
+            <th>اليوم</th>
+            <th>المهمة</th>
+            <th>تم الإنجاز</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    let admin = { username: 'admin', password: 'gold123' };
+    let currentUser = '';
+
+    async function fetchData() {
+      const res = await fetch('https://jsonblob.com/api/jsonBlob/your_blob_id');
+      return await res.json();
+    }
+
+    async function updateData(data) {
+      await fetch('https://jsonblob.com/api/jsonBlob/your_blob_id', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+    }
+
+    async function login() {
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+      currentUser = username;
+      if (username === admin.username && password === admin.password) {
+        document.getElementById('login-section').classList.add('hidden');
+        document.getElementById('admin-panel').classList.remove('hidden');
+        const data = await fetchData();
+        document.getElementById('tasks').value = data.tasks.join('\n');
+      } else {
+        const data = await fetchData();
+        if (data.names.includes(username) && !data.selected.includes(username)) {
+          document.getElementById('login-section').classList.add('hidden');
+          document.getElementById('participant-panel').classList.remove('hidden');
+          const nameList = document.getElementById('name-list');
+          nameList.innerHTML = `<option value="${username}">${username}</option>`;
+        } else {
+          alert('اسم المستخدم أو كلمة المرور غير صحيحة أو الاسم مستخدم بالفعل.');
+        }
+      }
+    }
+
+    async function addName() {
+      const name = document.getElementById('new-name').value;
+      const data = await fetchData();
+      if (!data.names.includes(name)) {
+        data.names.push(name);
+        await updateData(data);
+        alert('تمت إضافة الاسم.');
+      }
+    }
+
+    async function saveTasks() {
+      const tasks = document.getElementById('tasks').value.split('\n');
+      const data = await fetchData();
+      data.tasks = tasks;
+      await updateData(data);
+      alert('تم حفظ المهام.');
+    }
+
+    async function selectName() {
+      const name = document.getElementById('name-list').value;
+      const data = await fetchData();
+      data.selected.push(name);
+      data.progress[name] = Array(data.tasks.length).fill(false);
+      await updateData(data);
+      showProgress(name, data);
+    }
+
+    async function showProgress(name, data) {
+      document.getElementById('participant-panel').classList.add('hidden');
+      document.getElementById('daily-table').classList.remove('hidden');
+      const tbody = document.querySelector('#progress-table tbody');
+      tbody.innerHTML = '';
+      data.tasks.forEach((task, i) => {
+        tbody.innerHTML += `
+          <tr>
+            <td>اليوم ${i + 1}</td>
+            <td>${task}</td>
+            <td><input type="checkbox" onchange="toggleProgress('${name}', ${i}, this.checked)"></td>
+          </tr>`;
+      });
+    }
+
+    async function toggleProgress(name, index, checked) {
+      const data = await fetchData();
+      data.progress[name][index] = checked;
+      await updateData(data);
+    }
+
+    async function viewProgress() {
+      const data = await fetchData();
+      let msg = '';
+      for (let name in data.progress) {
+        const done = data.progress[name].filter(Boolean).length;
+        msg += `${name}: ${done}/${data.tasks.length}\n`;
+      }
+      alert(msg);
+    }
+
+    function changePassword() {
+      const newPass = document.getElementById('new-password').value;
+      if (newPass.length >= 4) {
+        admin.password = newPass;
+        alert('تم تحديث كلمة المرور (محليًا، لا يُخزن في السحابة).');
+      }
+    }
+  </script>
+</body>
+</html>
