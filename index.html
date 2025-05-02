@@ -215,34 +215,30 @@
       }
     }
 
-     async function viewProgress() {
-     const data = await fetchData();
-     let msg = '';
-     const days = ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
-     for (let user in data.progress) {
-     msg += `${user}:\n`;
-     data.progress[user].forEach((day, i) => {
-     msg += `  يوم ${days[i]}: ${day.count || 0} مهام\n`;
-     });
-   }
+    async function saveWeeklyProgress() {
+      const data = await fetchData();
+      for (let i = 0; i < 7; i++) {
+        const count = document.getElementById(`done-${i}`).value;
+        const detail = document.getElementById(`details-${i}`).value;
+        data.progress[currentUser][i] = { count, detail };
+      }
+      await updateData(data);
+      alert('تم حفظ التقدم.');
+    }
+
+    async function viewProgress() {
+  const data = await fetchData();
+  let msg = '';
+  const days = ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
+  for (let user in data.progress) {
+    msg += `${user}:\n`;
+    data.progress[user].forEach((day, i) => {
+      msg += `  يوم ${days[i]}: ${day.count || 0} مهام\n`;
+    });
+  }
   alert(msg);
 }
 
-
-    async function viewProgress() {
-      const data = await fetchData();
-      let msg = '';
-      for (let user in data.progress) {
-        if (isAdmin || user === currentUser) {
-          msg += `${user}:
-`;
-          data.progress[user].forEach((day, i) => {
-            msg += `  يوم ${i + 1}: ${day.count || 0} مهام\n`;
-          });
-        }
-      }
-      alert(msg);
-    }
   </script>
 </body>
 </html>
