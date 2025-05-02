@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <title>الوسام الذهبي</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: 'Cairo', sans-serif;
+      background: #fff8e1;
+      color: #5d4037;
+      padding: 20px;
+    }
+    .container {
+      max-width: 800px;
+      margin: auto;
+      background: white;
+      padding: 20px;
+      border-radius: 20px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+    h1, h2 {
+      text-align: center;
+      color: #bfa13c;
+    }
+    .gold {
+      color: #bfa13c;
+    }
+    .hidden {
+      display: none;
+    }
+    input, select, button, textarea {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      text-align: center;
+      padding: 8px;
+    }
+    th {
+      background-color: #bfa13c;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1 class="gold">الوسام الذهبي</h1>
+
+    <div id="login-section">
+      <h2>تسجيل الدخول</h2>
+      <input type="text" id="username" placeholder="اسم المستخدم">
+      <button onclick="login()">دخول</button>
+    </div>
+
+    <div id="admin-panel" class="hidden">
+      <h2>لوحة التحكم للمشرف</h2>
+      <input type="text" id="new-name" placeholder="أضف اسم متسابق">
+      <button onclick="addName()">إضافة</button>
+      <button onclick="viewProgress()">عرض التقدم</button>
+      <h3>المهام</h3>
+      <textarea id="tasks" placeholder="أدخل المهام اليومية (سطر لكل يوم)"></textarea>
+      <button onclick="saveTasks()">حفظ المهام</button>
+    </div>
+
+    <div id="participant-panel" class="hidden">
+      <h2>اختر اسمك</h2>
+      <select id="name-list"></select>
+      <button onclick="selectName()">اختيار</button>
+    </div>
+
+    <div id="daily-table" class="hidden">
+      <h2>إنجاز الأسبوع</h2>
+      <table id="progress-table">
+        <thead>
+          <tr>
+            <th>اليوم</th>
+            <th>المهمة</th>
+            <th>تم الإنجاز</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const admin = { username: 'admin', password: 'gold123' };
+    let currentUser = '';
+
+    async function fetchData() {
+      const res = await fetch('https://jsonblob.com/api/jsonBlob/your_blob_id');
+      return await res.json();
+    }
+
+    async function updateData(data) {
+      await fetch('https://jsonblob.com/api/jsonBlob/your_blob_id', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+    }
+
+    async function login() {
+      const username = document.getElementById('username').value;
+      currentUser = username;
+      const data = await fetchData();
+      if (username === admin.username) {
+        document.getElementById('login-section').classList.add('hidden');
+        document.getElementById('admin-panel').classList.remove('hidden');
+        document.getElementById('tasks').value = data.tasks.join('\n');
+      } else {
+        document.getElementById('login-section').classList.add('hidden');
+        document.getElementById('participant-panel').classList.remove('hidden');
+        const nameList = document.getElementById('name-list');
+        nameList.innerHTML = '';
+        data.names.forEach(n => {
+          if (!data.selected.includes(n)) {
+            const option = document.createElement('option');
+            option.textContent = n;
+            nameList.appendChild(option);
+          }
+        });
+      }
+    }
+
+    async function addName() {
+      const newName = document.getElementById('new-name').value;
+      const data = await fetchData();
+      if (!data.names.includes(newName)) {
+        data.names.push(newName);
+        await updateData(data);
+        alert('تمت الإضافة');
+      }
+    }
+
+    async function saveTasks() {
+      const tasks = document.getElementById('tasks').value.split('\n');
+      const data = await fetchData();
+      data.tasks = tasks;
+      await updateData(data);
+      alert('تم حفظ المهام');
+    }
+
+    async function selectName() {
+      const name = document.getElementById('name-list').value;
+      const data = await fetchData();
+      data.selected.push(name);
+      data.progress[name] = Array(data.tasks.length).fill(false);
+      await updateData(data);
+      showProgress(name, data);
+    }
+
+    async function showProgress(name, data) {
+      document.getElementById('participant-panel').classList.add('hidden');
+      document.getElementById('daily-table').classList.remove('hidden');
+      const tbody = document.querySelector('#progress-table tbody');
+      tbody.innerHTML = '';
+      data.tasks.forEach((task, index) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>اليوم ${index + 1}</td>
+          <td>${task}</td>
+          <td><input type="checkbox" ${data.progress[name][index] ? 'checked' : ''} onchange="toggleProgress('${name}', ${index}, this.checked)"></td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    async function toggleProgress(name, index, status) {
+      const data = await fetchData();
+      data.progress[name][index] = status;
+      await updateData(data);
+    }
+
+    async function viewProgress() {
+      const data = await fetchData();
+      let msg = '';
+      for (let [name, prog] of Object.entries(data.progress)) {
+        msg += `${name}: ${prog.filter(v => v).length}/${prog.length}\n`;
+      }
+      alert(msg);
+    }
+  </script>
+</body>
+</html>
