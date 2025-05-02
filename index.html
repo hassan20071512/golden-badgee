@@ -1,29 +1,30 @@
-
 <!DOCTYPE html>
 <html lang="ar">
 <head>
   <meta charset="UTF-8">
   <title>الوسام الذهبي</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
   <style>
     body {
       font-family: 'Cairo', sans-serif;
-      background: linear-gradient(to bottom, #fffdf7, #fff8e1);
+      background: linear-gradient(to bottom, #fffdf5, #fff7e0);
       color: #5d4037;
       margin: 0;
       padding: 0;
     }
     .container {
-      max-width: 800px;
+      max-width: 900px;
       margin: 40px auto;
       background: white;
       padding: 30px;
       border-radius: 20px;
-      box-shadow: 0 10px 30px rgba(191, 161, 60, 0.2);
+      box-shadow: 0 15px 40px rgba(191, 161, 60, 0.3);
     }
     h1, h2, h3 {
       text-align: center;
       color: #bfa13c;
+      margin-bottom: 20px;
     }
     input, select, button, textarea {
       width: 100%;
@@ -32,6 +33,7 @@
       border: 1px solid #e0c97d;
       border-radius: 10px;
       font-size: 16px;
+      background-color: #fffaf0;
     }
     button {
       background-color: #bfa13c;
@@ -50,6 +52,7 @@
       width: 100%;
       border-collapse: collapse;
       margin-top: 20px;
+      background-color: #fffef6;
     }
     th, td {
       border: 1px solid #f1e1aa;
@@ -66,11 +69,33 @@
       background-color: #fff5cc;
       border-radius: 10px;
     }
+    .decoration {
+      text-align: center;
+      font-size: 22px;
+      color: #bfa13c;
+      margin-bottom: 20px;
+    }
+    .line {
+      width: 100px;
+      height: 4px;
+      background-color: #bfa13c;
+      margin: 10px auto;
+      border-radius: 2px;
+    }
   </style>
 </head>
 <body>
   <div class="container">
+    <div class="decoration">⭐️ أهلاً بكم في منصة الإنجاز الأسبوعي ⭐️</div>
     <h1>الوسام الذهبي</h1>
+    <div class="line"></div>
+
+    <div id="register-section">
+      <h2>إنشاء حساب جديد</h2>
+      <input type="text" id="new-user" placeholder="اسم المستخدم الجديد">
+      <input type="password" id="new-pass" placeholder="كلمة المرور">
+      <button onclick="register()">تسجيل</button>
+    </div>
 
     <div id="login-section">
       <h2>تسجيل الدخول</h2>
@@ -81,86 +106,86 @@
 
     <div id="admin-panel" class="hidden">
       <h2>لوحة المشرف</h2>
-      <input type="text" id="new-name" placeholder="إضافة اسم مشارك جديد">
-      <button onclick="addName()">إضافة</button>
       <textarea id="tasks" placeholder="اكتب المهام اليومية (كل مهمة في سطر)"></textarea>
       <button onclick="saveTasks()">حفظ المهام</button>
       <button onclick="viewProgress()">عرض التقدم</button>
-      <div class="settings">
-        <h3>إعدادات</h3>
-        <label>تغيير كلمة المرور:</label>
-        <input type="password" id="new-password">
-        <button onclick="changePassword()">تحديث</button>
-      </div>
     </div>
 
-    <div id="participant-panel" class="hidden">
-      <h2>اختر اسمك</h2>
-      <select id="name-list"></select>
-      <button onclick="selectName()">متابعة</button>
-    </div>
-
-    <div id="daily-table" class="hidden">
-      <h2>جدول الإنجاز</h2>
-      <table id="progress-table">
+    <div id="weekly-panel" class="hidden">
+      <h2>جدول الإنجاز الأسبوعي</h2>
+      <table id="weekly-table">
         <thead>
           <tr>
             <th>اليوم</th>
-            <th>المهمة</th>
-            <th>تم الإنجاز</th>
+            <th>المهام المنجزة</th>
+            <th>تفاصيل المهام</th>
           </tr>
         </thead>
-        <tbody></tbody>
+        <tbody id="week-body"></tbody>
       </table>
+      <button onclick="saveWeeklyProgress()">حفظ التقدم</button>
     </div>
   </div>
 
   <script>
     let admin = { username: 'admin', password: 'gold123' };
     let currentUser = '';
+    let isAdmin = false;
+    let dataURL = 'https://jsonblob.com/api/jsonBlob/1367823886456119296';
 
     async function fetchData() {
-      const res = await fetch('https://jsonblob.com/api/jsonBlob/your_blob_id');
+      const res = await fetch(dataURL);
       return await res.json();
     }
 
     async function updateData(data) {
-      await fetch('https://jsonblob.com/api/jsonBlob/your_blob_id', {
+      await fetch(dataURL, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       });
     }
 
-    async function login() {
-      const username = document.getElementById('username').value;
-      const password = document.getElementById('password').value;
-      currentUser = username;
-      if (username === admin.username && password === admin.password) {
-        document.getElementById('login-section').classList.add('hidden');
-        document.getElementById('admin-panel').classList.remove('hidden');
-        const data = await fetchData();
-        document.getElementById('tasks').value = data.tasks.join('\n');
+    async function register() {
+      const newUser = document.getElementById('new-user').value;
+      const newPass = document.getElementById('new-pass').value;
+      const data = await fetchData();
+      if (!data.users) data.users = {};
+      if (!data.users[newUser]) {
+        data.users[newUser] = { pass: newPass, picked: false };
+        await updateData(data);
+        alert('تم إنشاء الحساب. يمكنك تسجيل الدخول الآن.');
       } else {
-        const data = await fetchData();
-        if (data.names.includes(username) && !data.selected.includes(username)) {
-          document.getElementById('login-section').classList.add('hidden');
-          document.getElementById('participant-panel').classList.remove('hidden');
-          const nameList = document.getElementById('name-list');
-          nameList.innerHTML = `<option value="${username}">${username}</option>`;
-        } else {
-          alert('اسم المستخدم أو كلمة المرور غير صحيحة أو الاسم مستخدم بالفعل.');
-        }
+        alert('اسم المستخدم مستخدم بالفعل.');
       }
     }
 
-    async function addName() {
-      const name = document.getElementById('new-name').value;
+    async function login() {
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
       const data = await fetchData();
-      if (!data.names.includes(name)) {
-        data.names.push(name);
-        await updateData(data);
-        alert('تمت إضافة الاسم.');
+      if (username === admin.username && password === admin.password) {
+        isAdmin = true;
+        currentUser = username;
+        document.getElementById('login-section').classList.add('hidden');
+        document.getElementById('register-section').classList.add('hidden');
+        document.getElementById('admin-panel').classList.remove('hidden');
+        document.getElementById('tasks').value = data.tasks.join('\n');
+        return;
+      }
+      if (data.users && data.users[username] && data.users[username].pass === password) {
+        currentUser = username;
+        if (data.users[username].picked) {
+          showWeeklyProgress(data);
+        } else {
+          data.users[username].picked = true;
+          data.progress = data.progress || {};
+          data.progress[username] = Array(7).fill({ count: 0, detail: '' });
+          await updateData(data);
+          showWeeklyProgress(data);
+        }
+      } else {
+        alert('البيانات غير صحيحة.');
       }
     }
 
@@ -172,52 +197,51 @@
       alert('تم حفظ المهام.');
     }
 
-    async function selectName() {
-      const name = document.getElementById('name-list').value;
-      const data = await fetchData();
-      data.selected.push(name);
-      data.progress[name] = Array(data.tasks.length).fill(false);
-      await updateData(data);
-      showProgress(name, data);
-    }
-
-    async function showProgress(name, data) {
-      document.getElementById('participant-panel').classList.add('hidden');
-      document.getElementById('daily-table').classList.remove('hidden');
-      const tbody = document.querySelector('#progress-table tbody');
+    function showWeeklyProgress(data) {
+      document.getElementById('login-section').classList.add('hidden');
+      document.getElementById('register-section').classList.add('hidden');
+      document.getElementById('weekly-panel').classList.remove('hidden');
+      const tbody = document.getElementById('week-body');
       tbody.innerHTML = '';
-      data.tasks.forEach((task, i) => {
+      const days = ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
+      for (let i = 0; i < 7; i++) {
+        const progress = data.progress[currentUser][i] || { count: '', detail: '' };
         tbody.innerHTML += `
           <tr>
-            <td>اليوم ${i + 1}</td>
-            <td>${task}</td>
-            <td><input type="checkbox" onchange="toggleProgress('${name}', ${i}, this.checked)"></td>
+            <td>${days[i]}</td>
+            <td><input type="number" min="0" max="${data.tasks.length}" id="done-${i}" value="${progress.count}" /></td>
+            <td><input type="text" id="details-${i}" value="${progress.detail}" placeholder="اكتب المهام المنجزة..." /></td>
           </tr>`;
-      });
+      }
     }
 
-    async function toggleProgress(name, index, checked) {
-      const data = await fetchData();
-      data.progress[name][index] = checked;
-      await updateData(data);
-    }
+     async function viewProgress() {
+     const data = await fetchData();
+     let msg = '';
+     const days = ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
+     for (let user in data.progress) {
+     msg += `${user}:\n`;
+     data.progress[user].forEach((day, i) => {
+     msg += `  يوم ${days[i]}: ${day.count || 0} مهام\n`;
+     });
+   }
+  alert(msg);
+}
+
 
     async function viewProgress() {
       const data = await fetchData();
       let msg = '';
-      for (let name in data.progress) {
-        const done = data.progress[name].filter(Boolean).length;
-        msg += `${name}: ${done}/${data.tasks.length}\n`;
+      for (let user in data.progress) {
+        if (isAdmin || user === currentUser) {
+          msg += `${user}:
+`;
+          data.progress[user].forEach((day, i) => {
+            msg += `  يوم ${i + 1}: ${day.count || 0} مهام\n`;
+          });
+        }
       }
       alert(msg);
-    }
-
-    function changePassword() {
-      const newPass = document.getElementById('new-password').value;
-      if (newPass.length >= 4) {
-        admin.password = newPass;
-        alert('تم تحديث كلمة المرور (محليًا، لا يُخزن في السحابة).');
-      }
     }
   </script>
 </body>
